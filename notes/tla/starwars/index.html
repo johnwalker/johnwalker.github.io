@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+  
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Solving with TLA in Star Wars KOTOR 2 &middot; </title>
+    <meta name="description" content="" />
+    <link rel="shortcut icon"  href="https://johnwalker.github.io/favicon.ico" />
+    <link rel="alternate" type="application/atom+xml" title="RSS" href="https://johnwalker.github.io/atom.xml">
+
+    <style>html,body{background:#fffaf7;color:#2d2d2d;font:16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"}a,a:visited{color:darkred;text-decoration:none}a:hover{text-decoration:underline}main{margin:auto;max-width:50rem;padding:0.8rem}pre{background:white;overflow:scroll;padding:1rem}td{border:1px solid #2d2d2d;padding:10px}img{height:auto;max-width:100%}.homepage-list{list-style:none;padding:1rem 0}.homepage-list li{align-items:center;display:flex;flex-wrap:wrap;justify-content:space-between;margin-bottom:10px}@media (max-width: 50rem){.homepage-list li a{width:100%}}
+</style>
+
+    <meta property="og:site_name" content="">
+      
+      <meta property="og:title" content="Solving with TLA in Star Wars KOTOR 2">
+      <meta property="og:description" content="">
+      <meta property="og:url" content="https://johnwalker.github.io/notes/tla/starwars/">
+      <meta property="og:image" content="">
+
+      <meta property="og:type" content="article" />
+        <meta property="article:published_time" content="2022-10-08T00:00:00+00:00" />
+
+      
+      
+    
+
+  </head>
+  
+
+  <body>
+    <main id="main" role="main">
+
+      
+      <header role="banner">
+        <h3 style="margin-top:0;">
+          <a href="https://johnwalker.github.io" title="Home"></a>
+          <br /><small></small>
+        </h3>
+      </header>
+      <hr />
+      
+
+      
+<article>
+  <h1>Solving with TLA in Star Wars KOTOR 2</h1>
+
+  
+    <p style="font-size:90%;">Posted on <time datetime="2022-10-08T00:00:00+00:00">October 08, 2022</time></p>
+  
+
+  <h1 id="tldr">TLDR</h1>
+<p>These are just my notes on an exercise in TLA+. I think it's a good excuse to
+play with sequence manipulation in TLA+ on an entirely impractical application.
+In this case, to solve a puzzle from a Star Wars game. Someday, I will write a
+story about a Jedi learning TLA+.</p>
+<h1 id="wait-whats-tla-whats-this-for">Wait, whats TLA+? Whats this for?</h1>
+<p>TLA+ is a modeling language. You can use it to write specifications. In TLA+, a
+specification is a set of formulas that could be true or false. Then you
+pass the specification to a model checker, which tries lots of things and tells
+you when and how your invariants or liveness properties fail.</p>
+<p>It's been successfully applied to distributed systems and protocols to identify
+when they break. I recommend the <a href="https://lamport.azurewebsites.net/video/videos.html">TLA+ Video
+Course</a> to learn more. Or
+<a href="https://www.hillelwayne.com/">Hillel Wayne</a>'s writing. Or <a href="https://pron.github.io/tlaplus">Pron's
+writing</a>. </p>
+<h1 id="problem">Problem</h1>
+<p>In Star Wars: Knights of the Old Republic II you encounter a computer that must 
+be repaired. After putting in a great deal of work, you encounter one final
+problem. There is one equation whose operators are missing: 6_2_9_8_1=13. Can
+you write a specification in TLA+ to identify the operators that satisfy it?</p>
+<h1 id="approach-1-predetermined-operators-and-brute-force">Approach 1: Predetermined Operators and Brute Force</h1>
+<p>This is essentially brute force. </p>
+<ol>
+<li>Choose a set of operators. </li>
+<li>Upon evaluation, does it equal 13? If so, you're done.</li>
+</ol>
+<pre data-lang="tla+" style="background-color:#2b2c2f;color:#cccece;" class="language-tla+ "><code class="language-tla+" data-lang="tla+"><span style="color:#5f6364;">--------------------------------- </span><span style="color:#c594c5;">MODULE</span><span> dxun </span><span style="color:#5f6364;">----------------------------------
+</span><span style="color:#c594c5;">EXTENDS</span><span> Integers, Sequences
+</span><span style="color:#c594c5;">VARIABLES</span><span> pass, position, operator_decisions, operands, operand_position
+</span><span>vars </span><span style="color:#5fb3b3;">== &lt;&lt;</span><span>pass, position, operator_decisions, operands, operand_position</span><span style="color:#5fb3b3;">&gt;&gt;
+</span><span>
+</span><span>Operator </span><span style="color:#5fb3b3;">==</span><span> {</span><span style="color:#99c794;">&quot;*&quot;</span><span>, </span><span style="color:#99c794;">&quot;/&quot;</span><span>, </span><span style="color:#99c794;">&quot;+&quot;</span><span>, </span><span style="color:#99c794;">&quot;-&quot;</span><span>}
+</span><span>
+</span><span>PassTypeOK </span><span style="color:#5fb3b3;">==</span><span> pass </span><span style="color:#5fb3b3;">\in </span><span style="color:#f99157;">1</span><span>..</span><span style="color:#f99157;">2
+</span><span>PositionTypeOK </span><span style="color:#5fb3b3;">==</span><span> position </span><span style="color:#5fb3b3;">\in</span><span> Nat
+</span><span>OperandPositionTypeOK </span><span style="color:#5fb3b3;">==</span><span> operand_position </span><span style="color:#5fb3b3;">\in</span><span> Nat
+</span><span>OperandTypeOK </span><span style="color:#5fb3b3;">== \A </span><span style="color:#f99157;">i </span><span style="color:#5fb3b3;">\in DOMAIN</span><span> operands</span><span style="color:#5fb3b3;">:</span><span> operands[i] </span><span style="color:#5fb3b3;">\in</span><span> Int
+</span><span>OperatorDecisionsTypeOK </span><span style="color:#5fb3b3;">== \A </span><span style="color:#f99157;">i </span><span style="color:#5fb3b3;">\in DOMAIN</span><span> operator_decisions</span><span style="color:#5fb3b3;">: 
+</span><span>                                operator_decisions[i] </span><span style="color:#5fb3b3;">\in</span><span> Operator 
+</span><span>TypeOK </span><span style="color:#5fb3b3;">== /\</span><span> PassTypeOK
+</span><span>          </span><span style="color:#5fb3b3;">/\</span><span> PositionTypeOK
+</span><span>          </span><span style="color:#5fb3b3;">/\</span><span> OperandPositionTypeOK
+</span><span>          </span><span style="color:#5fb3b3;">/\</span><span> OperandTypeOK
+</span><span>          </span><span style="color:#5fb3b3;">/\</span><span> OperatorDecisionsTypeOK
+</span><span>
+</span><span>PrecedenceMap(operator) </span><span style="color:#5fb3b3;">== 
+</span><span>    </span><span style="color:#c594c5;">CASE</span><span> operator </span><span style="color:#5fb3b3;">= </span><span style="color:#99c794;">&quot;*&quot; </span><span style="color:#5fb3b3;">-&gt; </span><span style="color:#f99157;">1
+</span><span>      </span><span style="color:#5fb3b3;">[]</span><span> operator </span><span style="color:#5fb3b3;">= </span><span style="color:#99c794;">&quot;/&quot; </span><span style="color:#5fb3b3;">-&gt; </span><span style="color:#f99157;">1
+</span><span>      </span><span style="color:#5fb3b3;">[]</span><span> operator </span><span style="color:#5fb3b3;">= </span><span style="color:#99c794;">&quot;+&quot; </span><span style="color:#5fb3b3;">-&gt; </span><span style="color:#f99157;">2
+</span><span>      </span><span style="color:#5fb3b3;">[]</span><span> operator </span><span style="color:#5fb3b3;">= </span><span style="color:#99c794;">&quot;-&quot; </span><span style="color:#5fb3b3;">-&gt; </span><span style="color:#f99157;">2
+</span><span>
+</span><span>PerformOperation(operation, lhs, rhs) </span><span style="color:#5fb3b3;">==
+</span><span>    </span><span style="color:#c594c5;">CASE</span><span> operation </span><span style="color:#5fb3b3;">= </span><span style="color:#99c794;">&quot;*&quot; </span><span style="color:#5fb3b3;">-&gt;</span><span> lhs * rhs
+</span><span>      </span><span style="color:#5fb3b3;">[]</span><span> operation </span><span style="color:#5fb3b3;">= </span><span style="color:#99c794;">&quot;+&quot; </span><span style="color:#5fb3b3;">-&gt;</span><span> lhs </span><span style="color:#5fb3b3;">+</span><span> rhs
+</span><span>      </span><span style="color:#5fb3b3;">[]</span><span> operation </span><span style="color:#5fb3b3;">= </span><span style="color:#99c794;">&quot;-&quot; </span><span style="color:#5fb3b3;">-&gt;</span><span> lhs </span><span style="color:#5fb3b3;">-</span><span> rhs
+</span><span>      </span><span style="color:#5fb3b3;">[]</span><span> operation </span><span style="color:#5fb3b3;">= </span><span style="color:#99c794;">&quot;/&quot; </span><span style="color:#5fb3b3;">-&gt;</span><span> lhs </span><span style="color:#5fb3b3;">\div</span><span> rhs
+</span><span>
+</span><span>Reduce(operation, seq, index) </span><span style="color:#5fb3b3;">== 
+</span><span>    </span><span style="color:#c594c5;">LET </span><span>i </span><span style="color:#5fb3b3;">==</span><span> index
+</span><span>        j </span><span style="color:#5fb3b3;">==</span><span> index </span><span style="color:#5fb3b3;">+ </span><span style="color:#f99157;">1
+</span><span>        lhs </span><span style="color:#5fb3b3;">==</span><span> seq[i]
+</span><span>        rhs </span><span style="color:#5fb3b3;">==</span><span> seq[j]
+</span><span>        val </span><span style="color:#5fb3b3;">== </span><span style="color:#6699cc;">PerformOperation</span><span>(operation, lhs, rhs)
+</span><span>    </span><span style="color:#c594c5;">IN
+</span><span>        </span><span style="color:#6699cc;">SubSeq</span><span>(operands, </span><span style="color:#f99157;">1</span><span>, i </span><span style="color:#5fb3b3;">- </span><span style="color:#f99157;">1</span><span>) </span><span style="color:#5fb3b3;">\o &lt;&lt;</span><span>val</span><span style="color:#5fb3b3;">&gt;&gt; 
+</span><span>        </span><span style="color:#5fb3b3;">\o </span><span style="color:#6699cc;">SubSeq</span><span>(operands, j</span><span style="color:#5fb3b3;">+</span><span style="color:#f99157;">1</span><span>, </span><span style="color:#6699cc;">Len</span><span>(operands))
+</span><span>
+</span><span>Init </span><span style="color:#5fb3b3;">== /\</span><span> pass </span><span style="color:#5fb3b3;">= </span><span style="color:#f99157;">1
+</span><span>        </span><span style="color:#5fb3b3;">/\</span><span> position </span><span style="color:#5fb3b3;">= </span><span style="color:#f99157;">1
+</span><span>        </span><span style="color:#5fb3b3;">/\</span><span> operands </span><span style="color:#5fb3b3;">= &lt;&lt;</span><span style="color:#f99157;">6</span><span>, </span><span style="color:#f99157;">2</span><span>, </span><span style="color:#f99157;">8</span><span>, </span><span style="color:#f99157;">9</span><span>, </span><span style="color:#f99157;">1</span><span style="color:#5fb3b3;">&gt;&gt;
+</span><span>        </span><span style="color:#5fb3b3;">/\</span><span> operator_decisions </span><span style="color:#5fb3b3;">\in</span><span> [</span><span style="color:#f99157;">1</span><span>..</span><span style="color:#6699cc;">Len</span><span>(operands)</span><span style="color:#5fb3b3;">-</span><span style="color:#f99157;">1 </span><span style="color:#5fb3b3;">-&gt;</span><span> Operator]
+</span><span>        </span><span style="color:#5fb3b3;">/\</span><span> operand_position </span><span style="color:#5fb3b3;">= </span><span style="color:#f99157;">1
+</span><span>
+</span><span>AdvanceOperatorPos </span><span style="color:#5fb3b3;">== 
+</span><span>    </span><span style="color:#c594c5;">LET </span><span>op </span><span style="color:#5fb3b3;">==</span><span> operator_decisions[position] </span><span style="color:#c594c5;">IN
+</span><span>        </span><span style="color:#c594c5;">IF </span><span style="color:#6699cc;">PrecedenceMap</span><span>(op) </span><span style="color:#5fb3b3;">&gt;</span><span> pass
+</span><span>            </span><span style="color:#c594c5;">THEN 
+</span><span>                </span><span style="color:#5fb3b3;">/\</span><span> operand_position&#39; </span><span style="color:#5fb3b3;">=</span><span> operand_position </span><span style="color:#5fb3b3;">+ </span><span style="color:#f99157;">1
+</span><span>            </span><span style="color:#c594c5;">ELSE 
+</span><span>                </span><span style="color:#5fb3b3;">UNCHANGED</span><span> operand_position
+</span><span>
+</span><span>Evaluate(index) </span><span style="color:#5fb3b3;">== 
+</span><span>    </span><span style="color:#c594c5;">LET </span><span>op </span><span style="color:#5fb3b3;">==</span><span> operator_decisions[position] </span><span style="color:#c594c5;">IN
+</span><span>        </span><span style="color:#c594c5;">IF </span><span style="color:#6699cc;">PrecedenceMap</span><span>(op) </span><span style="color:#5fb3b3;">=</span><span> pass
+</span><span>            </span><span style="color:#c594c5;">THEN 
+</span><span>                </span><span style="color:#5fb3b3;">/\</span><span> operands&#39; </span><span style="color:#5fb3b3;">= </span><span style="color:#6699cc;">Reduce</span><span>(op, operands, operand_position) 
+</span><span>                </span><span style="color:#5fb3b3;">/\ UNCHANGED &lt;&lt;</span><span>operand_position, operator_decisions</span><span style="color:#5fb3b3;">&gt;&gt;
+</span><span>            </span><span style="color:#c594c5;">ELSE 
+</span><span>                </span><span style="color:#5fb3b3;">/\</span><span> AdvanceOperatorPos
+</span><span>                </span><span style="color:#5fb3b3;">/\ UNCHANGED &lt;&lt;</span><span>operator_decisions, operands</span><span style="color:#5fb3b3;">&gt;&gt;
+</span><span>
+</span><span>HandleFirstPass </span><span style="color:#5fb3b3;">== /\</span><span> pass </span><span style="color:#5fb3b3;">= </span><span style="color:#f99157;">1
+</span><span>                   </span><span style="color:#5fb3b3;">/\</span><span> position </span><span style="color:#5fb3b3;">\in </span><span style="color:#f99157;">1</span><span>..(</span><span style="color:#6699cc;">Len</span><span>(operator_decisions))
+</span><span>                   </span><span style="color:#5fb3b3;">/\ </span><span style="color:#6699cc;">Evaluate</span><span>(position)
+</span><span>                   </span><span style="color:#5fb3b3;">/\</span><span> position&#39; </span><span style="color:#5fb3b3;">=</span><span> position </span><span style="color:#5fb3b3;">+ </span><span style="color:#f99157;">1
+</span><span>                   </span><span style="color:#5fb3b3;">/\ UNCHANGED &lt;&lt;</span><span>pass</span><span style="color:#5fb3b3;">&gt;&gt;
+</span><span>                          
+</span><span>TransitionToSecondPass </span><span style="color:#5fb3b3;">== /\</span><span> pass </span><span style="color:#5fb3b3;">= </span><span style="color:#f99157;">1
+</span><span>                          </span><span style="color:#5fb3b3;">/\</span><span> position </span><span style="color:#5fb3b3;">= </span><span style="color:#6699cc;">Len</span><span>(operator_decisions)</span><span style="color:#5fb3b3;">+</span><span style="color:#f99157;">1
+</span><span>                          </span><span style="color:#5fb3b3;">/\</span><span> pass&#39; </span><span style="color:#5fb3b3;">= </span><span style="color:#f99157;">2
+</span><span>                          </span><span style="color:#5fb3b3;">/\</span><span> position&#39; </span><span style="color:#5fb3b3;">= </span><span style="color:#f99157;">1
+</span><span>                          </span><span style="color:#5fb3b3;">/\</span><span> operand_position&#39; </span><span style="color:#5fb3b3;">= </span><span style="color:#f99157;">1
+</span><span>                          </span><span style="color:#5fb3b3;">/\ UNCHANGED &lt;&lt;</span><span>operator_decisions, operands</span><span style="color:#5fb3b3;">&gt;&gt;
+</span><span>
+</span><span>HandleSecondPass </span><span style="color:#5fb3b3;">== /\</span><span> pass </span><span style="color:#5fb3b3;">= </span><span style="color:#f99157;">2
+</span><span>                    </span><span style="color:#5fb3b3;">/\</span><span> position </span><span style="color:#5fb3b3;">\in </span><span style="color:#f99157;">1</span><span>..(</span><span style="color:#6699cc;">Len</span><span>(operator_decisions))
+</span><span>                    </span><span style="color:#5fb3b3;">/\ </span><span style="color:#6699cc;">Evaluate</span><span>(position)
+</span><span>                    </span><span style="color:#5fb3b3;">/\</span><span> position&#39; </span><span style="color:#5fb3b3;">=</span><span> position </span><span style="color:#5fb3b3;">+ </span><span style="color:#f99157;">1
+</span><span>                    </span><span style="color:#5fb3b3;">/\ UNCHANGED &lt;&lt;</span><span>pass</span><span style="color:#5fb3b3;">&gt;&gt;
+</span><span>
+</span><span>Next </span><span style="color:#5fb3b3;">== \/</span><span> HandleFirstPass
+</span><span>        </span><span style="color:#5fb3b3;">\/</span><span> TransitionToSecondPass
+</span><span>        </span><span style="color:#5fb3b3;">\/</span><span> HandleSecondPass 
+</span><span>
+</span><span>Spec </span><span style="color:#5fb3b3;">==</span><span> Init </span><span style="color:#5fb3b3;">/\ []</span><span>[Next]_vars </span><span style="color:#5fb3b3;">/\ WF_</span><span>vars(Next)
+</span><span>
+</span><span>AlwaysCompletes </span><span style="color:#5fb3b3;">== &lt;&gt;[]</span><span>(</span><span style="color:#6699cc;">Len</span><span>(operands) </span><span style="color:#5fb3b3;">= </span><span style="color:#f99157;">1</span><span>)
+</span><span>
+</span><span>NeverEquals13 </span><span style="color:#5fb3b3;">== </span><span style="color:#6699cc;">Len</span><span>(operands) </span><span style="color:#5fb3b3;">= </span><span style="color:#f99157;">1 </span><span style="color:#5fb3b3;">=&gt;</span><span> operands[</span><span style="color:#f99157;">1</span><span>] </span><span style="color:#5fb3b3;"># </span><span style="color:#f99157;">13
+</span><span style="color:#5f6364;">================================================================================
+</span></code></pre>
+<p>And, the accompanying configuration.</p>
+<pre style="background-color:#2b2c2f;color:#cccece;"><code><span>SPECIFICATION
+</span><span>    Spec
+</span><span>
+</span><span>INVARIANTS
+</span><span>    NeverEquals13
+</span><span>    TypeOK
+</span><span>
+</span><span>CHECK_DEADLOCK
+</span><span>    FALSE
+</span><span>
+</span><span>PROPERTIES
+</span><span>    AlwaysCompletes
+</span></code></pre>
+<h2 id="notes">Notes</h2>
+<p><code>AlwaysCompletes</code> verifies that all evaluations eventually end with exactly one value.</p>
+<p><code>NeverEquals13</code> is an invariant that fails when the expression evaluates to 13, giving
+us a satisfying set of operators.</p>
+<h2 id="questions">Questions</h2>
+<ol>
+<li>What happens when there is a division by zero?</li>
+<li>Why is <code>WF_vars</code> necessary to ensure the <code>AlwaysCompletes</code> property?</li>
+<li>What is the depth of the complete state graph seach?</li>
+<li>What is the outdegree of the complete state graph?</li>
+<li>Is there a simpler way to express the reduction operation? That is, do the
+arithmetic?</li>
+</ol>
+
+</article>
+
+
+      
+      <footer role="contentinfo">
+        <hr />
+        
+        
+        <small>
+          
+          
+        </small>
+        
+      </footer>
+      
+
+    </main>
+    
+    
+  </body>
+</html>
+
